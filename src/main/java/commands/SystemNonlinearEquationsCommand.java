@@ -2,6 +2,9 @@ package commands;
 
 import interfaces.ICommand;
 import interfaces.ISystem;
+import model.FirstSystem;
+import model.SecondSystem;
+import util.MathUtil;
 import util.MenuUtil;
 
 import java.util.ArrayList;
@@ -10,20 +13,20 @@ public class SystemNonlinearEquationsCommand implements ICommand {
     @Override
     public void execute() {
         ArrayList<ICommand> commands = new ArrayList<>();
-        ArrayList<ISystem> sysFuncs = new ArrayList<>();
+        ArrayList<ISystem> systems = new ArrayList<>();
 
-        sysFuncs.add(new FirstSysFunc());
-        sysFuncs.add(new SecondSysFunc());
+        systems.add(new FirstSystem());
+        systems.add(new SecondSystem());
 
-        for (ISystem func : sysFuncs){
+        for (ISystem system : systems){
             commands.add(new ICommand() {
                 @Override
                 public String getMessage() {
-                    return func.getMessage();
+                    return system.getSystem();
                 }
                 @Override
                 public void execute() {
-                    MathModule.execute(func);
+                    MathUtil.solveSystem(system);
                 }
             });
         }

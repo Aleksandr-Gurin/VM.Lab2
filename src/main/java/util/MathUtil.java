@@ -1,10 +1,18 @@
 package util;
 
 import interfaces.IFunction;
+import interfaces.ISystem;
+import model.Iteration;
 import model.Point;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Queue;
 import java.util.Scanner;
+import java.util.Stack;
+import java.util.concurrent.TimeoutException;
 
 public class MathUtil {
     public static void solveFunction(IFunction function) {
@@ -55,6 +63,67 @@ public class MathUtil {
         }
 
         new GraphicPanel(function, points, left, right);
+    }
+
+    public static void solveSystem(ISystem system) {
+        Scanner scanner = new Scanner(System.in);
+
+        double x, y, eps;
+        System.out.println("Введите приближение x:");
+        x = ReadUtil.readDouble(scanner);
+        System.out.println("Введите приближение y:");
+        y = ReadUtil.readDouble(scanner);
+
+        System.out.println("Введите точность:");
+        while (true) {
+            eps = ReadUtil.readDouble(scanner);
+            if (eps > 0 && eps < 1)
+                break;
+            else
+                System.out.println("Точность должна быть больше 0 и меньше 1. " +
+                                   "Попробуйте еще раз:");
+        }
+
+        try {
+            Stack<Iteration> iterations = solveNewton(system, x, y, eps);
+            Iteration lastIteration = iterations.pop();
+            iterations.forEach(Iteration::print);
+            ArrayList<Point> points = new ArrayList<>();
+            points.add(new Point(lastIteration.getX(), lastIteration.getY()));
+            new GraphicPanel(system.getFunctions(), points, -10, 10);
+        } catch (Exception e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private static Stack<Iteration> solveNewton(ISystem system, double previousX, double previousY, double eps) throws TimeoutException {
+        Stack<Iteration> iterations = new Stack<>();
+        double x, y;
+        int iteration = 0;
+        while (true) {
+            if (iteration < 1000) {
+                double[][] inverseJ = system.inverseJ(previousX, previousY);
+                if (inverseJ != null) {
+                    double h1 = inverseJ[0][0] * system.solveF1(previousX, previousY)
+                                + inverseJ[0][1] * system.solveF2(previousX, previousY);
+                    double h2 = inverseJ[1][0] * system.solveF1(previousX, previousY)
+                                + inverseJ[1][1] * system.solveF2(previousX, previousY);
+                    x = previousX - h1;
+                    y = previousY - h2;
+                    double epsX = Math.abs(x - previousX);
+                    double epsY = Math.abs(y - previousY);
+                    iterations.push(new Iteration(previousX, previousY, epsX, epsY, iteration++));
+                    if (Math.max(epsX, epsY) <= eps) {
+                        iterations.push(new Iteration(x, y, 0, 0, iteration));
+                        return iterations;
+                    }
+                    previousX = x;
+                    previousY = y;
+                } else
+                    throw new IllegalStateException("Определитель Якообиана равен нулю");
+            }else
+                throw new TimeoutException("Количество итераций больше 1000");
+        }
     }
 
     private static double solveChord(IFunction function, double left, double right, double eps) {
